@@ -70,6 +70,7 @@ def _lookup_uri_to_control(uri, display=None):
         (r'samsung:(?P<hostname>[^:/]+)(:(?P<port>\d+))?',
          _new_samsung_tcp_control),
         (r'test', lambda: VideoTestSrcControl(display)),
+        (r'udp(:(?P<hostname>[^:/]+))?:?(?P<port>\d+)?', UdpControl),
         (r'x11:(?P<display>[^,]+)?(,(?P<mapping>.+)?)?', X11Control),
         (r'rfb:(?P<hostname>[^:/]+)(:(?P<port>\d+))?', RemoteFrameBuffer),
         (r'redrat-bt:(?P<hostname>[^:/]+):((?P<port>\d+))?:'
@@ -165,6 +166,19 @@ class FileControl(RemoteControl):
         self.outfile.write("Released %s\n" % key)
         self.outfile.flush()
 
+class UdpControl(RemoteControl):
+    def __init__(self, hostname = None, port = None):
+        if hostname == None:
+            hostname = "localhost"
+        if port == None:
+            port = "6000"
+
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.hostname = hostname
+        self.port = int(port)
+    
+    def press(self, key):
+        self.sock.sendto(bytearray(key, 'utf-8') + b'\n', (self.hostname, self.port))
 
 class VideoTestSrcControl(RemoteControl):
     """Remote control used by selftests.
