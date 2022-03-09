@@ -1,11 +1,5 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 import itertools
 import os
 import shutil
@@ -31,23 +25,35 @@ from stbt_core import wait_until
 def test_that_slicing_a_Frame_is_still_a_Frame():
     f = stbt.Frame(numpy.zeros((720, 1280, 3), dtype=numpy.uint8),
                    time=1234)
+    assert f.time == 1234
+    assert f.width == 1280
+    assert f.height == 720
 
     f1 = f[10:20, 10:, 0]
     assert isinstance(f1, stbt.Frame)
     assert f1.time == 1234
+    assert f1.width == 1270
+    assert f1.height == 10
 
     f2 = stbt.crop(f, stbt.Region(10, 10, 20, 20))
     assert isinstance(f2, stbt.Frame)
     assert f2.time == 1234
+    assert f2.width == 20
+    assert f2.height == 20
 
+    # pylint:disable=no-member
     f3 = f.copy()
     assert isinstance(f3, stbt.Frame)
     assert f3.time == 1234
+    assert f3.width == 1280
+    assert f3.height == 720
     assert (f.__array_interface__["data"][0] !=
             f3.__array_interface__["data"][0])
 
     f4 = stbt.Frame(f)
     assert f4.time == 1234
+    assert f4.width == 1280
+    assert f4.height == 720
 
 
 def test_that_load_image_looks_in_callers_directory():
@@ -85,6 +91,8 @@ def test_load_image_with_numpy_array():
     assert img.filename is None
     assert img.relative_filename is None
     assert img.absolute_filename is None
+    assert img.width == 1280
+    assert img.height == 720
 
     a = numpy.zeros((720, 1280), dtype=numpy.uint8)
     b = numpy.zeros((720, 1280, 1), dtype=numpy.uint8)
@@ -125,6 +133,16 @@ def test_load_image_from_filename_with_color_channels():
 def test_that_load_image_with_nonexistent_image_raises_ioerror():
     with pytest.raises(IOError, match="No such file: idontexist.png"):
         stbt.load_image("idontexist.png")
+
+
+def test_that_image_and_frame_repr_can_print_numpy_scalar():
+    # Operations like `numpy.max` propagate the type of the input, so its
+    # output is still a `stbt.Image`.
+    f = stbt.Frame(numpy.zeros((720, 1280, 3), dtype=numpy.uint8))
+    assert repr(numpy.max(f)) == "Frame(0, dtype=uint8)"
+
+    img = stbt.load_image("action-panel.png")
+    assert repr(numpy.max(img)) == "Image(255, dtype=uint8)"
 
 
 def test_crop():
@@ -256,7 +274,7 @@ def test_is_screen_black_with_numpy_mask_and_region():
     assert not stbt.is_screen_black(frame, mask, 20, region)
 
 
-class C(object):
+class C():
     """A class with a single property, used by the tests."""
     def __init__(self, prop):
         self.prop = prop
@@ -271,7 +289,7 @@ class C(object):
         return not self.__eq__(other)
 
 
-class f(object):
+class f():
     """Helper factory for wait_until selftests. Creates a callable object that
     returns the specified values one by one each time it is called.
 
@@ -316,7 +334,7 @@ def mock_time():
         yield
 
 
-class Zero(object):
+class Zero():
     def __bool__(self):
         return False
 
@@ -408,7 +426,7 @@ def test_that_wait_until_returns_first_stable_value(mock_time):
 
 
 def test_that_wait_until_doesnt_compare_return_values(mock_time):
-    class MR(object):
+    class MR():
         def __init__(self, eq_allowed=False):
             time.sleep(1)  # advance the mock time by 1 second
             self.eq_allowed = eq_allowed

@@ -10,11 +10,6 @@ context manager. For now this is a private API but we intend to make it public
 at some point so that users can add caching to any custom image-processing
 functions in their test-packs.
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import functools
 import inspect
@@ -74,7 +69,7 @@ def setup_cache(filename=None):
     if filename is None:
         filename = default_filename
     mkdir_p(os.path.dirname(filename) or ".")
-    with lmdb.open(filename, map_size=MAX_CACHE_SIZE_BYTES) as db:  # pylint: disable=no-member
+    with lmdb.open(filename, map_size=MAX_CACHE_SIZE_BYTES) as db:
         assert _cache is None
         try:
             _cache = db
@@ -210,7 +205,7 @@ def memoize_iterator(additional_fields=None):
                         yield output
                 except StopIteration:
                     _cache_put(key + str(i).encode(), [None, "StopIteration"])
-                    raise
+                    return
 
         return inner
     return decorator
@@ -220,7 +215,7 @@ def _cache_put(key, value):
     with _cache.begin(write=True) as txn:
         try:
             txn.put(key, json.dumps(value).encode("utf-8"))
-        except lmdb.MapFullError:  # pylint: disable=no-member
+        except lmdb.MapFullError:
             global _cache_full_warning
             if not _cache_full_warning:
                 sys.stderr.write(
@@ -265,7 +260,7 @@ def _cache_hash(value):
     # type: (...) -> bytes
     h = Xxhash64()
 
-    class HashWriter(object):
+    class HashWriter():
         def write(self, data):
             if isinstance(data, str):
                 data = data.encode("utf-8")

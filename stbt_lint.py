@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Copyright 2014-2017 Stb-tester.com Ltd.
 # Copyright 2013 YouView TV Ltd.
@@ -28,11 +28,6 @@
 * E7008: "assert True" has no effect.
 
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 
 import argparse
 import subprocess
@@ -52,10 +47,7 @@ def main(argv):
         parser.print_usage(sys.stderr)
         return 1
 
-    if sys.version_info.major == 2:
-        executable_name = "pylint"
-    else:
-        executable_name = "pylint3"
+    executable_name = "pylint"
 
     try:
         with open("/dev/null", "w") as devnull:
@@ -69,7 +61,7 @@ def main(argv):
             return 1
 
     return subprocess.call(
-        [executable_name, "--load-plugins=stbt_core.pylint_plugin"] +
+        [executable_name, "--load-plugins=_stbt.pylint_plugin"] +
         pylint_args)
 
 

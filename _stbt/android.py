@@ -31,13 +31,6 @@ in your existing Selenium/WebDriver/Appium tests. See
 .. _Stb-tester CAMERA: https://stb-tester.com/stb-tester-camera
 """
 
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import raise_
-
 import configparser
 import logging
 import re
@@ -52,8 +45,6 @@ from _stbt.logging import debug
 
 
 class CoordinateSystem(Enum):
-    # pylint:disable=pointless-string-statement
-
     """How to translate coordinates from the video-frames processed by your
     test script, to the coordinates expected by ADB for tap & swipe events.
 
@@ -122,7 +113,7 @@ class CoordinateSystem(Enum):
     """
 
 
-class AdbDevice(object):
+class AdbDevice():
     """Control an Android device using `ADB`_.
 
     Default values for each parameter can be specified in your "stbt.conf"
@@ -154,7 +145,7 @@ class AdbDevice(object):
 
         if _config is None:
             import _stbt.config
-            _config = _stbt.config._config_init()  # pylint:disable=protected-access
+            _config = _stbt.config._config_init()
 
         self.adb_server = adb_server or _config.get("android", "adb_server",
                                                     fallback=None)
@@ -172,12 +163,12 @@ class AdbDevice(object):
         if coordinate_system is None:
             name = _config.get("android", "coordinate_system",
                                fallback="ADB_NATIVE")
-            if name not in CoordinateSystem.__members__:  # pylint:disable=no-member
+            if name not in CoordinateSystem.__members__:
                 raise ValueError(
                     "Invalid value '%s' for android.coordinate_system in "
                     "config file. Valid values are %s."
                     % (name, ", ".join("'%s'" % k for k in
-                                       CoordinateSystem.__members__)))  # pylint:disable=no-member
+                                       CoordinateSystem.__members__)))
             coordinate_system = CoordinateSystem[name]
         self.coordinate_system = coordinate_system
 
@@ -211,9 +202,9 @@ class AdbDevice(object):
                 self._connect(timeout_secs)
             output = self._adb(command, timeout_secs, **kwargs)
         except subprocess.CalledProcessError as e:
-            raise_(AdbError(e.returncode, e.cmd, e.output.decode("utf-8"),
-                            self),
-                   None, sys.exc_info()[2])
+            raise AdbError(
+                e.returncode, e.cmd, e.output.decode("utf-8"), self) \
+                .with_traceback(sys.exc_info()[2])
         if capture_output:
             return output
         else:
@@ -279,7 +270,7 @@ class AdbDevice(object):
         """
         # "adb shell input keyevent xxx" always returns success, so we need to
         # validate key names.
-        if key in _KEYCODE_MAPPINGS:
+        if key in _KEYCODE_MAPPINGS:  # pylint:disable=consider-using-get
             key = _KEYCODE_MAPPINGS[key]  # Map Stb-tester names to Android ones
         if key not in _ANDROID_KEYCODES:
             raise ValueError("Unknown key code %r" % (key,))
@@ -685,7 +676,8 @@ _ANDROID_KEYCODES = [
 
 
 # Map a few standard Stb-tester key names to Android keycodes.
-# So far we just map the buttons on the Amazon Fire TV remote control:
+# So far we just map the buttons on the Amazon Fire TV & NVidia Shield remote
+# controls:
 # https://developer.amazon.com/docs/fire-tv/remote-input.html#input-event-reference
 _KEYCODE_MAPPINGS = {
     "KEY_BACK": "KEYCODE_BACK",
@@ -694,11 +686,17 @@ _KEYCODE_MAPPINGS = {
     "KEY_HOME": "KEYCODE_HOME",
     "KEY_LEFT": "KEYCODE_DPAD_LEFT",
     "KEY_MENU": "KEYCODE_MENU",
+    "KEY_MUTE": "KEYCODE_VOLUME_MUTE",
     "KEY_OK": "KEYCODE_ENTER",
+    "KEY_PAUSE": "KEYCODE_MEDIA_PAUSE",
+    "KEY_PLAY": "KEYCODE_MEDIA_PLAY",
     "KEY_PLAYPAUSE": "KEYCODE_MEDIA_PLAY_PAUSE",
+    "KEY_POWER": "KEYCODE_POWER",
     "KEY_REWIND": "KEYCODE_MEDIA_REWIND",
     "KEY_RIGHT": "KEYCODE_DPAD_RIGHT",
     "KEY_UP": "KEYCODE_DPAD_UP",
+    "KEY_VOLUMEDOWN": "KEYCODE_VOLUME_DOWN",
+    "KEY_VOLUMEUP": "KEYCODE_VOLUME_UP",
 }
 
 

@@ -1,10 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-from future.utils import string_types
-
 import os
 import random
 import re
@@ -42,6 +35,8 @@ def test_that_matchresult_image_matches_template_passed_to_match():
 
 
 def test_that_matchresult_str_image_matches_template_passed_to_match():
+    stbt.TEST_PACK_ROOT = os.path.abspath(os.path.dirname(__file__))
+
     assert re.search(r"image=<Image\(filename=u?'black.png'",
                      str(stbt.match("black.png", frame=black())))
 
@@ -450,7 +445,7 @@ def test_that_build_pyramid_relaxes_mask():
     downsampled = mask_pyramid[1]
     cv2.imwrite("/tmp/dave2.png", downsampled)
     assert downsampled.shape == (98, 8, 3)
-    print(downsampled[:, :, 0])  # pylint:disable=unsubscriptable-object
+    print(downsampled[:, :, 0])
     # pylint:disable=bad-whitespace
     expected = \
         [[255, 255, 255, 255, 255, 255, 255, 255],
@@ -459,7 +454,7 @@ def test_that_build_pyramid_relaxes_mask():
          [255,   0,   0,   0,   0, 255, 255, 255],
          [255,   0,   0,   0,   0, 255, 255, 255]] + \
         [[255, 255, 255, 255, 255, 255, 255, 255]] * 93
-    assert numpy.all(downsampled[:, :, 0] == expected)  # pylint:disable=unsubscriptable-object
+    assert numpy.all(downsampled[:, :, 0] == expected)
 
 
 @requires_opencv_3
@@ -502,7 +497,7 @@ def test_that_match_fast_path_is_equivalent():
         ("button-transparent.png", "buttons.png"),
     ]
     for reference, frame in images:
-        if isinstance(frame, string_types):
+        if isinstance(frame, str):
             frame = stbt.load_image(frame, color_channels=3)
         reference = stbt.load_image(reference)
         orig_m = stbt.match(reference, frame=frame)

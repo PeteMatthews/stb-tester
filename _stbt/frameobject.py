@@ -3,15 +3,9 @@ Copyright 2016-2018 Stb-tester.com Ltd.
 License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from past.builtins import cmp
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
+
 import functools
 import threading
-from future.utils import with_metaclass
 
 try:
     from itertools import zip_longest
@@ -31,7 +25,7 @@ def for_object_repository(cls=None):
     Usage:
 
         @for_object_repository
-        class MyClass(object):
+        class MyClass():
             ...
     """
     # These classes are extracted by static analysis, so return the class
@@ -40,7 +34,7 @@ def for_object_repository(cls=None):
         # Called like:
         #
         #     @for_object_repository()
-        #     class MyClass(object):
+        #     class MyClass():
         def decorator(cls):
             return cls
         return decorator
@@ -48,14 +42,13 @@ def for_object_repository(cls=None):
         # Called like:
         #
         #    @for_object_repository
-        #    class MyClass(object):
+        #    class MyClass():
         return cls
 
 
 def _memoize_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        # pylint: disable=protected-access
         if fn not in self._FrameObject__frame_object_cache:
             self._FrameObject__frame_object_cache[fn] = fn(self)
         return self._FrameObject__frame_object_cache[fn]
@@ -65,7 +58,6 @@ def _memoize_property_fn(fn):
 def _mark_in_is_visible(fn):
     @functools.wraps(fn)
     def inner(self):
-        # pylint: disable=protected-access
         try:
             self._FrameObject__local.in_is_visible += 1
         except AttributeError:
@@ -80,7 +72,6 @@ def _mark_in_is_visible(fn):
 def _noneify_property_fn(fn):
     @functools.wraps(fn)
     def inner(self):
-        # pylint: disable=protected-access
         if (getattr(self._FrameObject__local, "in_is_visible", 0) or
                 self.is_visible):
             return fn(self)
@@ -122,8 +113,7 @@ class _FrameObjectMeta(type):
         super(_FrameObjectMeta, cls).__init__(name, parents, dct)
 
 
-class FrameObject(with_metaclass(_FrameObjectMeta, object)):
-    # pylint: disable=line-too-long
+class FrameObject(metaclass=_FrameObjectMeta):
     r'''Base class for user-defined Page Objects.
 
     FrameObjects are Stb-tester's implementation of the *Page Object* pattern.
@@ -243,12 +233,12 @@ class FrameObject(with_metaclass(_FrameObjectMeta, object)):
         return self.__cmp__(other) >= 0
 
     def __cmp__(self, other):
-        # pylint: disable=protected-access
         if isinstance(other, self.__class__):
             for s, o in zip_longest(self._iter_fields(), other._iter_fields()):
-                v = cmp(s[1], o[1])
-                if v != 0:
-                    return v
+                if s[1] < o[1]:
+                    return -1
+                elif s[1] > o[1]:
+                    return 1
             return 0
         else:
             return NotImplemented

@@ -1,8 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import os
 import queue
 import random
@@ -36,7 +31,7 @@ def _start_x(*args, **kwargs):
     for x in [signal.SIGUSR1, signal.SIGCHLD]:
         orig_handler[x] = signal.signal(x, on_signal)
 
-    xorg = subprocess.Popen(
+    xorg = subprocess.Popen(  # pylint:disable=subprocess-popen-preexec-fn
         preexec_fn=lambda: signal.signal(signal.SIGUSR1, signal.SIG_IGN),
         *args, **kwargs)
 

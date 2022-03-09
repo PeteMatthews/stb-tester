@@ -1,10 +1,5 @@
 # coding: utf-8
 
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 import argparse
 import itertools
 import os
@@ -15,7 +10,7 @@ from textwrap import dedent
 
 from .config import get_config
 from .types import Region
-from .utils import basestring, mkdir_p
+from .utils import mkdir_p
 
 _debug_level = None
 
@@ -74,7 +69,7 @@ def argparser_add_verbose_argument(argparser):
              'dumps to ./stbt-debug directory)')
 
 
-def imshow(img):
+def imshow(img, regions=None):
     """Displays the image in a Jupyter Notebook Notebook.
 
     You can only call this if you're already inside a Jupyter Notebook.
@@ -83,16 +78,23 @@ def imshow(img):
         raise RuntimeError(
             "_stbt.logging.imshow can only be run inside a Jupyter Notebook")
 
-    from IPython.core.display import Image, display  # pylint:disable=import-error
-    if isinstance(img, basestring):
+    import cv2
+
+    if regions:
+        from _stbt.imgutils import load_image
+        img = load_image(img)
+        for r in regions:
+            cv2.rectangle(img, (r.x, r.y), (r.right, r.bottom), (32, 0, 255))
+
+    from IPython.core.display import Image, display
+    if isinstance(img, str):
         display(Image(img))
     else:
-        import cv2
         _, data = cv2.imencode(".png", img)
         display(Image(data=bytes(data.data), format="png"))
 
 
-class ImageLogger(object):
+class ImageLogger():
     """Log intermediate images used in image processing (such as `match`).
 
     Create a new ImageLogger instance for each frame of video.
@@ -200,7 +202,7 @@ class ImageLogger(object):
                     .render())
 
         if self.jupyter:
-            from IPython.display import display, IFrame  # pylint:disable=import-error
+            from IPython.display import display, IFrame
             display(IFrame(src=index_html, width=974, height=600))
 
     def _draw(self, region, source_size, css_class, title=None):

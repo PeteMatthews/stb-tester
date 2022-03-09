@@ -10,7 +10,7 @@ libexecdir?=$(exec_prefix)/libexec
 datarootdir?=$(prefix)/share
 mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
-python_version?=2.7
+python_version?=3
 pythondir?=$(prefix)/lib/python$(python_version)/site-packages
 sysconfdir?=$(prefix)/etc
 
@@ -28,14 +28,8 @@ TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 MKTAR = $(TAR) --format=gnu --owner=root --group=root \
     --mtime="$(shell git show -s --format=%ci HEAD)"
 GZIP ?= gzip
-
-ifeq ($(python_version), 2.7)
 PYLINT ?= pylint
-PYTEST ?= pytest
-else
-PYLINT ?= pylint3
 PYTEST ?= pytest-3
-endif
 
 CFLAGS?=-O2
 
@@ -80,13 +74,14 @@ INSTALL_PYLIB_FILES = \
     _stbt/irnetbox.py \
     _stbt/keyboard.py \
     _stbt/libstbt.so \
-    _stbt/libxxhash.so \
     _stbt/logging.py \
     _stbt/match.py \
     _stbt/motion.py \
+    _stbt/multipress.py \
     _stbt/ocr.py \
     _stbt/precondition.py \
     _stbt/power.py \
+    _stbt/pylint_plugin.py \
     _stbt/sqdiff.py \
     _stbt/stbt_run.py \
     _stbt/stbt-power.sh \
@@ -108,7 +103,6 @@ INSTALL_CORE_SCRIPTS = \
     stbt_lint.py \
     stbt_match.py \
     stbt_power.py \
-    stbt_record.py \
     stbt_run.py \
     stbt-screenshot \
     stbt-tv
@@ -135,11 +129,8 @@ install-core: all
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 	$(INSTALL) -m 0644 etc/stbt.conf \
 	    $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
-	for filename in $(INSTALL_CORE_SCRIPTS); do \
-	    sed '1s,^#!/usr/bin/python\b,#!/usr/bin/python$(python_version),' \
-	        $$filename > $(DESTDIR)$(libexecdir)/stbt/$$filename; \
-	    chmod 0755 $(DESTDIR)$(libexecdir)/stbt/$$filename; \
-	done
+	$(INSTALL) -m 0755 $(INSTALL_CORE_SCRIPTS) \
+	    $(DESTDIR)$(libexecdir)/stbt/
 	for filename in $(INSTALL_PYLIB_FILES); do \
 	    [ -x "$$filename" ] && mode=0755 || mode=0644; \
 	    $(INSTALL) -m $$mode $$filename $(DESTDIR)$(pythondir)/$$filename; \
@@ -213,7 +204,6 @@ clean:
 PYTHON_FILES := \
     $(shell git ls-files '*.py' \
       | grep -v -e ^setup.py \
-                -e ^tests/webminspector/ \
                 -e ^vendor/)
 
 check: check-pylint check-pytest check-integrationtests
@@ -233,8 +223,9 @@ check-pythonpackage:
 	    tests/test_grid.py \
 	    tests/test_match.py \
 	    tests/test_motion.py \
+	    tests/test_multipress.py \
 	    tests/test_transition.py && \
-	stbt_lint="pylint --load-plugins=stbt_core.pylint_plugin" \
+	stbt_lint="pylint --load-plugins=_stbt.pylint_plugin" \
 	    tests/run-tests.sh -i tests/test-stbt-lint.sh
 check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
@@ -278,9 +269,7 @@ tests/buttons.png: tests/buttons.svg
 # list of files) won't be set correctly.
 dist: stb-tester-$(VERSION).tar.gz
 
-DIST = $(shell git ls-files | grep -v '^vendor/')
-DIST += VERSION
-DIST += vendor/.submodules-checked-out
+DIST = $(shell git ls-files)
 
 stb-tester-$(VERSION).tar.gz: $(DIST)
 	@$(TAR) --version 2>/dev/null | grep -q GNU || { \
@@ -289,10 +278,8 @@ stb-tester-$(VERSION).tar.gz: $(DIST)
 	    exit 1; }
 	# Separate tar and gzip so we can pass "-n" for more deterministic
 	# tarball generation
-	SUBMODULE_DIST=$$( \
-	    git submodule foreach -q 'git ls-files | sed s,^,$$path/,') && \
 	$(MKTAR) -c --transform='s,^,stb-tester-$(VERSION)/,' \
-	         -f stb-tester-$(VERSION).tar $^ $$SUBMODULE_DIST && \
+	         -f stb-tester-$(VERSION).tar $^ && \
 	$(GZIP) -9fn stb-tester-$(VERSION).tar
 
 
@@ -309,27 +296,8 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 TAGS:
 	etags stbt_core/**.py _stbt/**.py
 
-### Third-party dependencies #################################################
-
-XXHASH_SOURCES = \
-    vendor/xxHash/xxhash.c \
-    vendor/xxHash/xxhash.h
-
-_stbt/libxxhash.so : $(XXHASH_SOURCES)
-	$(CC) -shared -fPIC -O3 -o $@ $(filter-out %.h,$(XXHASH_SOURCES)) $(CFLAGS)
-
 _stbt/libstbt.so : _stbt/sqdiff.c
 	$(CC) -shared -fPIC -O3 -o $@ _stbt/sqdiff.c $(CFLAGS)
-
-SUBMODULE_FILES = $(XXHASH_SOURCES)
-
-$(SUBMODULE_FILES) : vendor/% : vendor/.submodules-checked-out
-
-vendor/.submodules-checked-out : .gitmodules
-	git submodule init && \
-	git submodule sync && \
-	git submodule update && \
-	touch $@
 
 ### Documentation ############################################################
 
@@ -352,7 +320,7 @@ install-docs: docs/stbt.1
 
 ### Docker images for CI #####################################################
 
-CI_DOCKER_IMAGES = ubuntu1804-python2 ubuntu1804-python3
+CI_DOCKER_IMAGES = ubuntu2004
 
 $(CI_DOCKER_IMAGES:%=.circleci/.%.built): .circleci/.%.built: .circleci/%.dockerfile
 	docker build -t stbtester/circleci:$* -f .circleci/$*.dockerfile \

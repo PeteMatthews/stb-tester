@@ -9,12 +9,6 @@ License: LGPL v2.1 or (at your option) any later version (see
 https://github.com/stb-tester/stb-tester/blob/master/LICENSE for details).
 """
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
-
 from contextlib import contextmanager
 
 from _stbt.black import (
@@ -54,6 +48,8 @@ from _stbt.motion import (
     detect_motion,
     MotionTimeout,
     wait_for_motion)
+from _stbt.multipress import (
+    MultiPress)
 from _stbt.ocr import (
     apply_ocr_corrections,
     match_text,
@@ -76,12 +72,10 @@ from _stbt.types import (
     Region,
     UITestError,
     UITestFailure)
-from _stbt.utils import (
-    to_native_str)
 from _stbt.wait import (
     wait_until)
 
-__all__ = [to_native_str(x) for x in [
+__all__ = [
     "apply_ocr_corrections",
     "as_precondition",
     "ConfigurationError",
@@ -113,6 +107,7 @@ __all__ = [to_native_str(x) for x in [
     "MotionDiff",
     "MotionResult",
     "MotionTimeout",
+    "MultiPress",
     "NoVideo",
     "ocr",
     "OcrEngine",
@@ -135,7 +130,7 @@ __all__ = [to_native_str(x) for x in [
     "wait_for_motion",
     "wait_for_transition_to_end",
     "wait_until",
-]]
+]
 
 # Functions available to stbt scripts
 # ===========================================================================
@@ -196,8 +191,10 @@ def press(key, interpress_delay_secs=None, hold_secs=None):
           the keypress.
 
     * Added in v29: The ``hold_secs`` parameter.
-    * Added in v30: Returns an object with keypress timings, instead of
+    * Changed in v30: Returns an object with keypress timings, instead of
       ``None``.
+    * Changed in v33: The ``key`` argument can be an Enum (we'll use the Enum's
+      value, which must be a string).
     """
     return _dut.press(key, interpress_delay_secs, hold_secs)
 
@@ -319,8 +316,7 @@ def get_frame():
 # Internal
 # ===========================================================================
 
-class UnconfiguredDeviceUnderTest(object):
-    # pylint:disable=unused-argument
+class UnconfiguredDeviceUnderTest():
     def last_keypress(self):
         return None
 
@@ -333,8 +329,10 @@ class UnconfiguredDeviceUnderTest(object):
             "stbt.pressing isn't configured to run on your hardware")
 
     def draw_text(self, *args, **kwargs):
-        raise RuntimeError(
-            "stbt.draw_text isn't configured to run on your hardware")
+        # Unlike the others this has no external side-effects on the device
+        # under test. `stbt.draw_text` already logs it before calling
+        # `_dut.draw_text`. Really this shouldn't belong in the DUT at all.
+        pass
 
     def press_until_match(self, *args, **kwargs):
         raise RuntimeError(
